@@ -203,7 +203,9 @@ Found an error or want to add examples? This documentation is maintained by Hype
 
 ## License
 
-This documentation is provided for educational purposes to support Hytale modding community development.
+This project is licensed under the [MIT License](LICENSE).
+
+Free to use, modify, and distribute for any purpose.
 
 ---
 
