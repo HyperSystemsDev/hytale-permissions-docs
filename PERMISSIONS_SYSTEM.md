@@ -327,7 +327,19 @@ function checkNodes(nodes, id):
 N. Default value (false if not specified)
 ```
 
+> **Note: Multi-Provider Group Aggregation**
+>
+> `PermissionsModule.getGroupsForUser()` aggregates non-empty group sets from ALL providers. If Provider[0] returns `["Default"]` (user has no explicit groups) and Provider[1] returns `["VIP"]`, the combined result is `["Default", "VIP"]`. This means a user can end up in the "Default" group even with explicit groups in another provider, if at least one provider has no data for that user and falls back to `["Default"]`.
+>
+> *Source: `PermissionsModule.java:142-157`*
+
 **Important:** First definitive match wins. Once a permission is granted or denied, no further checking occurs.
+
+> **WARNING: Nondeterministic Group Iteration Order**
+>
+> The `getGroupsForUser()` return value is backed by a `HashSet`, whose iteration order is undefined. If a user belongs to multiple groups with conflicting permissions (e.g., Group A grants `build.enabled` while Group B has `-build.enabled`), the result is **nondeterministic** — it depends on which group happens to be iterated first. To avoid this: ensure groups don't have conflicting permissions, or use explicit user-level permissions for overrides.
+>
+> *Source: `PermissionsModule.java:171` — iterates `permissionProvider.getGroupsForUser(uuid)`*
 
 ---
 
@@ -397,6 +409,10 @@ try {
 }
 ```
 
+### Internal Map Types
+
+> **Note for Plugin Developers:** The internal storage maps in `HytalePermissionsProvider` use `Object2ObjectOpenHashMap` from [FastUtil](https://fastutil.di.unimi.it/), not standard `HashMap`. The virtual groups map in `PermissionsModule` also uses `Object2ObjectOpenHashMap`. This matters if you are serializing, inspecting, or casting these maps — they do not behave identically to `java.util.HashMap` in all edge cases.
+
 ### Data Cleanup
 
 Empty permission/group sets are automatically removed:
@@ -435,6 +451,7 @@ if (set.isEmpty()) {
 | `WORLD_MAP_COORDINATE_TELEPORT` | `"hytale.world_map.teleport.coordinate"` | Coordinate teleport |
 | `WORLD_MAP_MARKER_TELEPORT` | `"hytale.world_map.teleport.marker"` | Marker teleport |
 | `UPDATE_NOTIFY` | `"hytale.system.update.notify"` | Update notifications |
+| `MODS_OUTDATED_NOTIFY` | `"hytale.mods.outdated.notify"` | Outdated mod notifications |
 
 ### Permission Categories
 
@@ -456,8 +473,10 @@ hytale.
 │   └── flycam         # Fly camera
 ├── world_map.         # World map features
 │   └── teleport.*     # Teleportation
-└── system.            # System features
-    └── update.notify  # Update notifications
+├── system.            # System features
+│   └── update.notify  # Update notifications
+└── mods.              # Mod-related features
+    └── outdated.notify # Outdated mod notifications
 ```
 
 ### Helper Methods
@@ -926,12 +945,22 @@ The default `HytalePermissionsProvider` uses JSON for persistence.
 
 - Users without explicit groups default to `["Default"]` group
 - Empty arrays are omitted during save
-- `OP` and `Default` groups are always restored on load
 - File is saved with pretty printing (indented JSON)
+
+> **WARNING: OP and Default Group Overwrite Behavior**
+>
+> After loading `permissions.json`, the server forcibly re-inserts the DEFAULT_GROUPS using `put()` (not `putIfAbsent()`). This means **any custom permissions added to the OP or Default groups in permissions.json are OVERWRITTEN on every server load**. Only the default values (`["*"]` for OP, `[]` for Default) survive a restart. Use custom group names (e.g., `"SuperOP"`, `"Member"`) for additional permission sets.
+>
+> *Source: `HytalePermissionsProvider.java:257-259`*
 
 ### Example Minimal File
 
-New server with no modifications:
+When `permissions.json` is first created by the server, the `create()` method writes an empty JSON object:
+```json
+{}
+```
+
+After the first modification triggers a save (e.g., adding a user to a group), the file expands to include the default groups:
 ```json
 {
   "groups": {
@@ -940,6 +969,8 @@ New server with no modifications:
   }
 }
 ```
+
+> **Note:** The OP and Default groups only appear in the file after a read+write cycle. The initial file is always `{}`.
 
 ---
 

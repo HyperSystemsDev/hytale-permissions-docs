@@ -78,6 +78,8 @@ Set<String> groups = perms.getGroupsForUser(uuid);
 | `OP` | `["*"]` | Full access |
 | `Default` | `[]` | Auto-assigned if no groups |
 
+> **Warning:** Custom permissions on OP/Default groups are **overwritten** on every server load. Use custom group names for additional permission sets.
+
 ---
 
 ## Commands
@@ -165,6 +167,7 @@ hytale.editor.history           # Undo/redo
 hytale.camera.flycam            # Fly camera
 hytale.world_map.teleport.*     # Map teleport
 hytale.system.update.notify     # Update notifications
+hytale.mods.outdated.notify     # Outdated mod notifications
 ```
 
 ---

@@ -204,6 +204,15 @@ User permissions → Group permissions → Virtual groups → Default
 // Result: DENIED (user perms checked first)
 ```
 
+### Avoid Conflicting Multi-Group Permissions
+
+> **Warning:** If a user belongs to multiple groups, the order in which groups are iterated is **nondeterministic** (backed by `HashSet`). If Group A grants a permission and Group B denies it, the result depends on which group is iterated first — and this can change between server restarts.
+
+**Recommendation:**
+- Ensure groups assigned to the same user don't have conflicting permissions
+- Use explicit user-level permissions for overrides instead of relying on group order
+- If you need deterministic multi-group behavior, implement it in a custom provider
+
 ---
 
 ## Security Considerations
@@ -239,6 +248,21 @@ public boolean hasPermission(UUID uuid, String perm) {
     }
     return normalCheck(uuid, perm);
 }
+```
+
+### Do Not Customize OP/Default Groups
+
+> **Warning:** The OP and Default group permissions are forcibly reset to their defaults (`["*"]` for OP, `[]` for Default) on every server load. Any custom permissions you add to these groups will be silently lost on restart.
+
+**Recommendation:** Create custom groups instead:
+
+```java
+// Bad - permissions lost on restart
+perms.addGroupPermission("OP", Set.of("myplugin.admin.*"));
+
+// Good - persists across restarts
+perms.addGroupPermission("SuperOP", Set.of("*", "myplugin.admin.*"));
+perms.addUserToGroup(uuid, "SuperOP");
 ```
 
 ### Audit Permission Changes

@@ -14,7 +14,7 @@ Comparison of Hytale's permission system with popular Minecraft permission plugi
 | Temporary Permissions | No | Yes | Yes | Yes |
 | Context System | Virtual Groups | Full contexts | Worlds | Limited |
 | Negation Syntax | `-permission` | `permission: false` | `-permission` | GUI-based |
-| Wildcard | `*`, `prefix.*` | `*`, `prefix.*` | `*`, `prefix.*` | `*` |
+| Wildcard | `*`, `-*`, `prefix.*`, `-prefix.*` | `*`, `prefix.*` | `*`, `prefix.*` | `*` |
 | Storage | JSON file | Multiple | Multiple | MySQL/SQLite |
 | Web Interface | No | Yes | No | Yes |
 | API Style | Provider interface | Service API | Manager API | API class |
@@ -169,6 +169,8 @@ public Set<String> getGroupPermissions(String group) {
     return perms;
 }
 ```
+
+> **Warning:** The base `PermissionsModule` resolution algorithm does NOT recursively resolve parent groups. If you implement group inheritance in a custom provider, you must flatten all inherited permissions within `getGroupPermissions()` — the module will only call this method once per group and will not follow inheritance chains on its own.
 
 ---
 

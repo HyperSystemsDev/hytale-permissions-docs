@@ -175,6 +175,10 @@ public class PermissionImporter {
 }
 ```
 
+> **Warning: OP/Default Group Data Loss**
+>
+> Any custom permissions on the OP or Default groups in the source `permissions.json` will be lost after import + server restart. The server forcibly resets OP to `["*"]` and Default to `[]` on every load. Before migrating, move any custom permissions from OP/Default to custom group names (e.g., `"SuperOP"`, `"Member"`).
+
 ### Command Integration
 
 ```java

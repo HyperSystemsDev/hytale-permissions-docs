@@ -79,27 +79,14 @@ Each test case includes:
 
 **Action:** `hasPermission(uuid-1, "hytale.command.ban")`
 
-**Expected:** `true`
+**Expected:** `false`
 
-**Rationale:** The algorithm checks exact matches before wildcards. Order is:
-1. `*` (not present)
-2. `-*` (not present)
-3. `hytale.command.ban` (not present)
-4. `-hytale.command.ban` → Would deny, BUT...
-
-Wait - let me re-examine the algorithm:
-
-```java
-if (nodes.contains("*")) return TRUE;
-if (nodes.contains("-*")) return FALSE;
-if (nodes.contains(id)) return TRUE;      // id = "hytale.command.ban"
-if (nodes.contains("-" + id)) return FALSE; // checks "-hytale.command.ban"
-// Then wildcard loop...
-```
-
-**Corrected Expected:** `false`
-
-**Rationale:** Exact deny (`-hytale.command.ban`) is checked BEFORE prefix wildcards (`hytale.command.*`).
+**Rationale:** The exact deny (`-hytale.command.ban`) is checked BEFORE prefix wildcards (`hytale.command.*`). Resolution order:
+1. `*` → not present
+2. `-*` → not present
+3. `hytale.command.ban` (exact grant) → not present
+4. `-hytale.command.ban` (exact deny) → **MATCH → return FALSE**
+5. `hytale.command.*` (prefix wildcard) → never reached
 
 ---
 
@@ -174,11 +161,14 @@ The shorter wildcard is checked first.
 
 **Action:** `hasPermission(uuid-1, "build.enabled")`
 
-**Expected:** `false` (assuming Moderator is first in the set)
+**Expected:** **NONDETERMINISTIC** — result depends on `HashSet` iteration order
 
-**Rationale:** Groups are checked in iteration order. First group's permissions are checked first.
+**Rationale:** Groups are checked in iteration order, but `getGroupsForUser()` returns a `HashSet`, whose iteration order is undefined and can change between JVM runs.
 
-**Caveat:** Set iteration order is not guaranteed! The actual result depends on internal Set ordering.
+> **CRITICAL WARNING:** This test case demonstrates a real-world footgun. If a user belongs to multiple groups with conflicting permissions, the outcome is unpredictable. **Do not rely on group iteration order for permission resolution.** Either:
+> - Ensure groups assigned to the same user never have conflicting permissions
+> - Use explicit user-level permissions for overrides
+> - Implement deterministic ordering in a custom provider
 
 ---
 
@@ -250,6 +240,33 @@ The shorter wildcard is checked first.
 **Expected:** `false`
 
 **Rationale:** When user has explicit groups, they do NOT automatically get "Default" group. Only their explicit groups are used.
+
+---
+
+### 3.3 OP/Default Group Custom Permissions Lost on Restart
+
+**Setup:**
+```json
+{
+  "groups": {
+    "OP": ["*", "myplugin.admin.*"],
+    "Default": ["myplugin.basic.use"]
+  }
+}
+```
+
+**Action:**
+1. Before restart: `hasPermission(op-user, "myplugin.admin.reload")` → Check result
+2. Restart server
+3. After restart: `hasPermission(op-user, "myplugin.admin.reload")` → Check result
+
+**Expected:**
+- Before restart: `true` (OP has `*` and `myplugin.admin.*`)
+- After restart: `true` (OP still has `*`, but `myplugin.admin.*` was silently removed)
+
+**Rationale:** The server forcibly re-inserts DEFAULT_GROUPS using `put()` on load, replacing any custom OP permissions with just `["*"]` and Default with `[]`. In this specific case, the OP user still passes because `*` grants everything — but any custom permissions added to Default are completely lost.
+
+**The real danger:** If you added permissions to the Default group (e.g., `myplugin.basic.use`), those are silently lost on restart. Users in the Default group will lose access without any error.
 
 ---
 
@@ -476,7 +493,9 @@ The shorter wildcard is checked first.
 | Global * vs specific - | `["*", "-x"]` check x | TRUE | * checked first |
 | Global -* vs specific + | `["-*", "x"]` check x | FALSE | -* checked first |
 | Prefix grant vs exact deny | `["a.*", "-a.b"]` check a.b | FALSE | Exact deny before wildcards |
+| Multi-group conflict | Group A: `-x`, Group B: `x` | NONDETERMINISTIC | HashSet iteration order undefined |
 | User deny vs group grant | User: `-x`, Group: `x` | FALSE | User checked before group |
+| OP custom perms after restart | OP: `["*", "custom"]` → restart | `["*"]` only | DEFAULT_GROUPS overwrite on load |
 | No explicit groups | (empty) | Default group used | Fallback behavior |
 | Case sensitivity | `["A.B"]` check `a.b` | FALSE | Case-sensitive |
 | Literal * in name | `["a.*.b"]` check `a.x.b` | FALSE | Only trailing * is wildcard |

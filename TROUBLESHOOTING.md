@@ -282,6 +282,27 @@ ls -la permissions.json
 | File not writable | Check file permissions |
 | Data not saving | Check for exceptions in logs |
 
+### Why Are My OP Group Custom Permissions Disappearing?
+
+The server forcibly re-inserts the default OP and Default groups on every load using `put()` (not `putIfAbsent()`). This **destroys** any custom permissions you added to these groups in `permissions.json`.
+
+**Example:** You add `myplugin.vip.*` to the OP group in `permissions.json`. After server restart, the OP group is reset to `["*"]` only.
+
+**Solution:** Never add custom permissions to the OP or Default groups. Instead, create custom groups:
+
+```json
+{
+  "groups": {
+    "OP": ["*"],
+    "Default": [],
+    "SuperOP": ["*", "myplugin.admin.*"],
+    "Member": ["myplugin.basic.*"]
+  }
+}
+```
+
+Assign users to your custom groups instead of modifying OP/Default.
+
 ---
 
 ## 6. Event Listener Issues
@@ -439,14 +460,20 @@ perms.add("my.permission.*"); // Matches my.permission.anything
 
 ### Mistake 3: Expecting -* to Allow Specific
 
+`-*` is checked before exact matches in the resolution algorithm, so `-*` blocks ALL permissions regardless of specific grants in the same set. Conversely, `*` is checked before `-*`, so if BOTH exist, `*` wins.
+
 ```java
 // WRONG: Expecting specific to override -*
 perms.addAll(Set.of("-*", "allowed.perm"));
-hasPermission(uuid, "allowed.perm"); // false! -* wins
+hasPermission(uuid, "allowed.perm"); // false! -* is checked before exact match
+
+// ALSO NOTE: * beats -*
+perms.addAll(Set.of("*", "-*"));
+hasPermission(uuid, "anything"); // true! * is checked before -*
 
 // RIGHT: Don't use -* if you want specific grants
 perms.add("allowed.perm");
-// Don't grant anything else
+// Simply don't grant anything else
 ```
 
 ### Mistake 4: Direct Provider Calls

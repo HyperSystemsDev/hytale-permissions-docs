@@ -8,10 +8,11 @@
 
 | Property | Value |
 |----------|-------|
-| **Hytale Build** | Pre-release (January 2025) |
+| **Hytale Build** | Pre-release (February 2026) |
 | **Decompiler** | Vineflower |
-| **Decompilation Date** | January 2025 |
-| **Documentation Version** | 1.0.0 |
+| **Decompilation Date** | February 2026 |
+| **Documentation Version** | 1.1.0 |
+| **JAR Location** | `AppData/Roaming/Hytale/install/release/package/game/latest/Server/HytaleServer.jar` |
 
 ---
 
@@ -99,4 +100,4 @@ This documentation will be updated when:
 
 ---
 
-*Last updated: January 2025*
+*Last updated: February 2026*

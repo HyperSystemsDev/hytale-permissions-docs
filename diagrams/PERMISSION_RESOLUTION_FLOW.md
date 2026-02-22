@@ -70,8 +70,8 @@ flowchart TD
     EXACT_DENY{nodes contains '-' + id?} -->|Yes| RETURN_FALSE
     EXACT_DENY -->|No| WILDCARD_LOOP
 
-    subgraph WILDCARD_LOOP["Check Prefix Wildcards"]
-        W1[Split id by '.'] --> W2[Build prefix trace]
+    subgraph WILDCARD_LOOP["Check Prefix Wildcards (shorter prefixes first)"]
+        W1["Split id by '.'<br>e.g., 'hytale.command.ban' → ['hytale','command','ban']"] --> W2["Build prefix trace incrementally:<br>i=0: 'hytale', i=1: 'hytale.command', i=2: 'hytale.command.ban'"]
         W2 --> W3{nodes contains trace + '.*'?}
         W3 -->|Yes| RETURN_TRUE
         W3 -->|No| W4{nodes contains '-' + trace + '.*'?}
@@ -182,11 +182,22 @@ hasPermission(uuid, "a.b.c", false)
 
 ---
 
+## Null vs Empty Set Semantics
+
+| Input | Behavior | Code Path |
+|-------|----------|-----------|
+| `null` set | Skip immediately (fall through) | `checkNodes()` returns `null` at first check |
+| Empty set `[]` | Check all patterns, find no matches | `checkNodes()` returns `null` after exhausting all checks |
+
+Both `null` and empty sets result in a fall-through to the next check level, but via different code paths. A `null` set means the provider has no data at all; an empty set means the provider has data but no permissions are assigned.
+
+---
+
 ## Key Takeaways
 
 1. **First match wins** - Once permission is granted or denied, checking stops
 2. **Denial is explicit** - Must use `-` prefix to deny
-3. **Wildcards are hierarchical** - `a.*` matches `a.b` but not `x.y`
+3. **Wildcards are hierarchical** - `a.*` matches `a.b` but not `x.y`; shorter prefixes are checked first (`hytale.*` before `hytale.command.*`)
 4. **Providers are additive** - All providers are checked; first match from any provider wins
 5. **Virtual groups extend regular groups** - Checked after group's own permissions
 

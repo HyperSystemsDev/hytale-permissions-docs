@@ -30,8 +30,13 @@ import java.util.logging.Logger;
  *   └── GroupRemoved          - User removed from group (inner class)
  *
  *   PlayerGroupEvent extends PlayerPermissionChangeEvent
- *   ├── Added                 - User added to group (standalone)
- *   └── Removed               - User removed from group (standalone)
+ *   ├── Added                 - User added to group (standalone) [DISPATCHED BY SYSTEM]
+ *   └── Removed               - User removed from group (standalone) [DISPATCHED BY SYSTEM]
+ *
+ *   NOTE: Both PlayerPermissionChangeEvent.GroupAdded/GroupRemoved (inner classes) AND
+ *   PlayerGroupEvent.Added/Removed exist in the codebase. However, PermissionsModule
+ *   dispatches PlayerGroupEvent.Added/Removed — NOT the inner class versions.
+ *   Subscribe to PlayerGroupEvent.Added/Removed for group membership changes.
  *
  *   GroupPermissionChangeEvent (abstract)
  *   ├── Added                 - Permissions added to a group

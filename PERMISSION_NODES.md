@@ -12,8 +12,9 @@
 4. [Camera Permissions](#camera-permissions)
 5. [World Map Permissions](#world-map-permissions)
 6. [System Permissions](#system-permissions)
-7. [Wildcards](#wildcards)
-8. [Permission Generation](#permission-generation)
+7. [Mods Permissions](#mods-permissions)
+8. [Wildcards](#wildcards)
+9. [Permission Generation](#permission-generation)
 
 ---
 
@@ -33,7 +34,8 @@ hytale.
 ├── editor.*         # Creative/editor tool permissions
 ├── camera.*         # Camera mode permissions
 ├── world_map.*      # Map feature permissions
-└── system.*         # System-level permissions
+├── system.*         # System-level permissions
+└── mods.*           # Mod-related permissions
 ```
 
 ---
@@ -183,16 +185,27 @@ HytalePermissions.fromCommand("command", "subcommand");
 
 ---
 
+## Mods Permissions
+
+**Base:** `hytale.mods`
+
+| Permission | Constant | Description |
+|------------|----------|-------------|
+| `hytale.mods.outdated.notify` | `MODS_OUTDATED_NOTIFY` | Receive outdated mod notifications |
+
+---
+
 ## Wildcards
 
-### Global Wildcards
+### Grant Patterns
 
 | Pattern | Effect |
 |---------|--------|
 | `*` | Grants ALL permissions |
-| `-*` | Denies ALL permissions |
+| `prefix.*` | Grants all permissions under prefix |
+| `exact.perm` | Grants a specific permission |
 
-### Prefix Wildcards
+**Examples:**
 
 | Pattern | Effect |
 |---------|--------|
@@ -201,13 +214,27 @@ HytalePermissions.fromCommand("command", "subcommand");
 | `hytale.editor.*` | Grants all editor permissions |
 | `hytale.editor.brush.*` | Grants all brush permissions |
 
-### Negation Wildcards
+### Deny Patterns
+
+| Pattern | Effect |
+|---------|--------|
+| `-*` | Denies ALL permissions |
+| `-prefix.*` | Denies all permissions under prefix |
+| `-exact.perm` | Denies a specific permission |
+
+**Examples:**
 
 | Pattern | Effect |
 |---------|--------|
 | `-hytale.command.*` | Denies all command permissions |
 | `-hytale.editor.*` | Denies all editor permissions |
 | `-hytale.editor.packs.*` | Denies all pack management permissions |
+
+### Wildcard Restrictions
+
+> **Important:** Middle wildcards (e.g., `hytale.*.ban`) are **NOT** supported. The `*` character in `hytale.*.ban` is treated as a literal asterisk, not a wildcard pattern. Wildcards only work in two positions:
+> - Standalone: `*` (grant all) or `-*` (deny all)
+> - Trailing: `prefix.*` (grant all under prefix) or `-prefix.*` (deny all under prefix)
 
 ---
 
@@ -310,6 +337,7 @@ hytale.camera.flycam
 hytale.world_map.teleport.coordinate
 hytale.world_map.teleport.marker
 hytale.system.update.notify
+hytale.mods.outdated.notify
 ```
 </details>
 

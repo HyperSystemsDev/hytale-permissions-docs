@@ -20,6 +20,15 @@ import java.util.concurrent.ConcurrentHashMap;
  *   - Return empty sets, never null
  *   - The first registered provider receives all write operations
  *   - Permission checks iterate through ALL providers
+ *
+ * Thread Safety Note:
+ *   This template uses ConcurrentHashMap for basic thread safety, but the returned
+ *   Sets may have race conditions if callers iterate while another thread modifies.
+ *   The vanilla HytalePermissionsProvider uses ReadWriteLock, which is more robust
+ *   for this use case. For production code, consider:
+ *   - Using ReadWriteLock (like vanilla) instead of ConcurrentHashMap
+ *   - Returning defensive copies or unmodifiable views from getter methods
+ *   - Using Set.copyOf() for snapshot isolation
  */
 public class CustomProviderTemplate implements PermissionProvider {
 
@@ -203,7 +212,13 @@ public class CustomProviderTemplate implements PermissionProvider {
      * Get all groups a user belongs to.
      *
      * Note: The vanilla provider returns ["Default"] for users without explicit groups.
-     * You may want to replicate this behavior or handle defaults differently.
+     * Returning empty vs ["Default"] has different effects because
+     * PermissionsModule.getGroupsForUser() aggregates non-empty sets from ALL providers.
+     *
+     * If this provider returns empty and the vanilla provider returns ["Default"],
+     * the user ends up in ["Default"]. If this provider returns ["VIP"] and vanilla
+     * returns ["Default"], the user ends up in ["Default", "VIP"]. Choose your
+     * behavior carefully based on whether vanilla is also active.
      *
      * @param uuid The user's UUID
      * @return Unmodifiable set of group names (never null)
@@ -217,9 +232,11 @@ public class CustomProviderTemplate implements PermissionProvider {
         }
 
         // Option 1: Return empty (let other providers handle defaults)
+        // Use this when running alongside vanilla provider
         return Collections.emptySet();
 
         // Option 2: Return default group (like vanilla)
+        // Use this when replacing the vanilla provider entirely
         // return Set.of("Default");
     }
 

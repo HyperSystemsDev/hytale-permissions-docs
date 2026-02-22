@@ -108,7 +108,7 @@ The order in which permission checks are evaluated. User permissions are checked
 Short for [PermissionProvider](#permissionprovider).
 
 ### Provider Chain
-The ordered list of registered permission providers. Permissions are checked across all providers in order.
+The ordered list of registered permission providers. Permissions are checked across all providers in order. Both grants and denials stop the chain — the first definitive match (whether grant or deny) wins, and no further providers are consulted.
 
 ---
 
@@ -156,7 +156,7 @@ Universally Unique Identifier. The 128-bit identifier used to reference players 
 ## V
 
 ### Virtual Group
-A game-mode-based permission set that grants additional permissions based on context (e.g., Creative mode granting builder tools).
+A context-based permission set that grants additional permissions based on game state. By default, only Creative mode has a virtual group, which grants `hytale.editor.builderTools`. Custom virtual groups can be defined via `PermissionsModule.setVirtualGroups()`. Virtual groups are global (not per-provider) — they are stored on `PermissionsModule` itself and applied regardless of which provider returned the group membership.
 
 ---
 
